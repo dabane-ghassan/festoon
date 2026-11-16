@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="104" viewBox="0 0 40 104">
+  <defs>
+    <linearGradient id="wood" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#C98F52"/>
+      <stop offset="0.45" stop-color="#E9BE85"/>
+      <stop offset="1" stop-color="#B97E43"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#F2F2F0"/>
+      <stop offset="0.5" stop-color="#A9AAA6"/>
+      <stop offset="1" stop-color="#6F706C"/>
+    </linearGradient>
+    <filter id="s" x="-30%" y="-10%" width="160%" height="130%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.4" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g filter="url(#s)">
+    <!-- the two jaws, slightly apart at the top -->
+    <path d="M7 4 Q6 2 9 2 L19 2 L19 100 Q19 102 17 102 L10 102 Q8 102 8 99 Z" fill="url(#wood)"/>
+    <path d="M21 2 L31 2 Q34 2 33 4 L32 99 Q32 102 30 102 L23 102 Q21 102 21 100 Z" fill="url(#wood)"/>
+    <path d="M19 2 L21 2 L21 100 L19 100 Z" fill="#8A5A2B" opacity="0.55"/>
+    <!-- grain -->
+    <path d="M11 10 Q12 40 11 95 M15 8 Q14 50 15.5 96 M25 8 Q26 50 25 96 M29 10 Q28 45 29.5 95"
+          stroke="#9C6634" stroke-width="0.6" fill="none" opacity="0.35"/>
+    <!-- the spring -->
+    <rect x="4" y="40" width="32" height="9" rx="4.5" fill="url(#steel)"/>
+    <rect x="4" y="40" width="32" height="9" rx="4.5" fill="none" stroke="#5B5C58" stroke-width="0.8"/>
+    <path d="M10 41 L10 48 M15 41 L15 48 M20 41 L20 48 M25 41 L25 48 M30 41 L30 48" stroke="#5B5C58" stroke-width="0.6" opacity="0.6"/>
+  </g>
+</svg>

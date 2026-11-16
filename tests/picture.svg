@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <rect width="800" height="500" fill="#F4EDE0"/>
+  <rect x="40" y="40" width="720" height="60" rx="10" fill="#1B1A17"/>
+  <circle cx="80" cy="70" r="12" fill="#E5482D"/><circle cx="116" cy="70" r="12" fill="#F5C542"/><circle cx="152" cy="70" r="12" fill="#3FA34D"/>
+  <text x="60" y="190" font-family="sans-serif" font-size="54" font-weight="700" fill="#1B1A17">Quarterly olive report</text>
+  <rect x="60" y="250" width="120" height="200" fill="#3FA34D"/><rect x="220" y="310" width="120" height="140" fill="#2F6FDE"/>
+  <rect x="380" y="220" width="120" height="230" fill="#E5482D"/><rect x="540" y="350" width="120" height="100" fill="#F5C542"/>
+</svg>

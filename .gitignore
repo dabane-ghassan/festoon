@@ -1,0 +1,5 @@
+tests/out/
+tests/picture.png
+dist/
+extension/schemas/gschemas.compiled
+__pycache__/

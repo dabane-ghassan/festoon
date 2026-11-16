@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.festoon" path="/org/gnome/shell/extensions/festoon/">
+
+    <!-- what hangs -->
+    <key name="hang-screenshots" type="b">
+      <default>true</default>
+      <summary>Hang new screenshots</summary>
+    </key>
+    <key name="hang-recordings" type="b">
+      <default>true</default>
+      <summary>Hang new screen recordings</summary>
+    </key>
+    <key name="watch-folders" type="as">
+      <default>[]</default>
+      <summary>Extra folders whose new pictures and videos hang on the line</summary>
+    </key>
+    <key name="tidy-screenshots" type="b">
+      <default>false</default>
+      <summary>Move new screenshots out of the Screenshots folder, so they live only on the line</summary>
+    </key>
+    <key name="quiet-screenshots" type="b">
+      <default>false</default>
+      <summary>Skip the "Screenshot captured" notification</summary>
+    </key>
+    <key name="hang-images" type="b">
+      <default>true</default>
+      <summary>Hang images you copy</summary>
+    </key>
+    <key name="hang-text" type="b">
+      <default>true</default>
+      <summary>Hang text you copy, as a note</summary>
+    </key>
+    <key name="hang-links" type="b">
+      <default>true</default>
+      <summary>Hang web addresses you copy, as a link</summary>
+    </key>
+    <key name="read-text" type="b">
+      <default>true</default>
+      <summary>Read the text in screenshots so search can find it (needs tesseract)</summary>
+    </key>
+
+    <!-- the line -->
+    <key name="reveal-on-hover" type="b">
+      <default>true</default>
+      <summary>Bring the line down when the pointer rests on the top bar</summary>
+    </key>
+    <key name="reveal-delay" type="i">
+      <range min="0" max="2000"/>
+      <default>350</default>
+      <summary>How long the pointer rests on the top bar first, in milliseconds</summary>
+    </key>
+    <key name="peek" type="b">
+      <default>true</default>
+      <summary>Bring the line down for a moment when something new hangs</summary>
+    </key>
+    <key name="max-items" type="i">
+      <range min="3" max="100"/>
+      <default>30</default>
+      <summary>How many items stay on the line</summary>
+    </key>
+    <key name="size" type="s">
+      <choices>
+        <choice value="small"/><choice value="medium"/><choice value="large"/>
+      </choices>
+      <default>'medium'</default>
+      <summary>Item size</summary>
+    </key>
+    <key name="zoom-on-hover" type="b">
+      <default>true</default>
+      <summary>Items grow a little under the pointer</summary>
+    </key>
+    <key name="sway" type="b">
+      <default>true</default>
+      <summary>Items sway on their clips</summary>
+    </key>
+    <key name="sounds" type="b">
+      <default>true</default>
+      <summary>Play a soft sound when something hangs or is copied</summary>
+    </key>
+    <key name="show-indicator" type="b">
+      <default>true</default>
+      <summary>Show the clothespin in the top bar</summary>
+    </key>
+
+    <!-- shortcuts -->
+    <key name="show-shortcut" type="as">
+      <default><![CDATA[['<Control><Alt>j']]]></default>
+      <summary>Bring the line down, or put it away</summary>
+    </key>
+    <key name="search-shortcut" type="as">
+      <default><![CDATA[['<Control><Alt>f']]]></default>
+      <summary>Search the line</summary>
+    </key>
+  </schema>
+</schemalist>
