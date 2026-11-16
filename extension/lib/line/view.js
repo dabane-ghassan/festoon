@@ -248,7 +248,7 @@ class LineView extends Gtk.Widget {
         media.set_muted(true);
         card.media = media;
         const ready = () => {
-            if (!media.get_prepared())
+            if (!media.is_prepared())
                 return;
             const w = media.get_intrinsic_width();
             const h = media.get_intrinsic_height();

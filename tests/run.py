@@ -400,6 +400,28 @@ def run(rig, r):
     f.shot("09-menu")
     rig.keys("Escape", wait=0.4)
 
+    print("the festoon command")
+    cli = lambda *a, stdin=None: subprocess.run(["sh", str(ROOT / "bin/festoon"), *a], env=rig.env, input=stdin,
+                                                capture_output=True, text=True, timeout=20)
+    count = len(f.items())
+    other = rig.tmp / "from the terminal.png"
+    picture(other, 500, 500)
+    r.check("festoon hang <file> hangs a picture", cli("hang", str(other)).returncode == 0 and f.items()[0]["path"] == str(other))
+    r.check("festoon hang - hangs standard input as a note", cli("hang", "-", stdin="'quoted' 123\nand more\n").returncode == 0
+            and f.items()[0]["kind"] == "note" and f.items()[0]["title"] == "'quoted' 123", f.items()[0])
+    listed = cli("list").stdout.strip().split("\n")
+    r.check("festoon list shows what hangs", len(listed) == count + 2 and listed[0].startswith("1\tnote"), listed[:3])
+    r.check("festoon copy 1 copies the newest", cli("copy", "1").returncode == 0 and f.clipboard() == "'quoted' 123\nand more")
+    r.check("festoon state is JSON", json.loads(cli("state").stdout)["count"] == count + 2)
+    r.check("festoon show and hide", cli("show").returncode == 0 and f.wait(lambda: f.state()["down"], 2)
+            and cli("hide").returncode == 0 and f.wait(lambda: not f.state()["down"], 2))
+    r.check("festoon://putback links work", cli("letgo", "1").returncode == 0 and cli("festoon://putback").returncode == 0
+            and len(f.items()) == count + 2)
+    r.check("unknown items are refused with a reason", cli("copy", "99").returncode == 2)
+    cli("letgo", "1")
+    cli("letgo", "1")
+    time.sleep(0.4)
+
     print("turning off")
     rig.js("Main.extensionManager.disableExtension('%s'); 1" % UUID)
     r.check("disabling the extension stops the line", f.wait(lambda: "ServiceUnknown" in f.line("GetState") or "not provided" in f.line("GetState"), 6))

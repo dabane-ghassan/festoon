@@ -329,7 +329,7 @@ export class Line {
             return this.store.add({kind: 'recording', path, owned: false, via: 'file', title: GLib.path_get_basename(path)}).id;
         try {
             const [, bytes] = GLib.file_get_contents(path);
-            const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+            const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes).replace(/\n+$/, '');
             return this.HangText(text);
         } catch (_e) {
             return '';

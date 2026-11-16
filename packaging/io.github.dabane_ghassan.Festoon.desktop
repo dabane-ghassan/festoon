@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=Festoon
+GenericName=Screenshot and clipboard line
+Comment=Your screenshots and the things you copy, on a line under the top bar
+Exec=festoon %u
+Icon=io.github.dabane_ghassan.Festoon
+Terminal=false
+Categories=Utility;GNOME;
+Keywords=screenshot;clipboard;shelf;history;copy;paste;drag;line;
+MimeType=x-scheme-handler/festoon;
+StartupNotify=true
+StartupWMClass=io.github.dabane_ghassan.Festoon
+Actions=show;search;
+
+[Desktop Action show]
+Name=Show the Line
+Exec=festoon show
+
+[Desktop Action search]
+Name=Search the Line
+Exec=festoon search

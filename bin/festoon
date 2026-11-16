@@ -1,0 +1,142 @@
+#!/bin/sh
+# festoon: drive the line from a terminal, a launcher or a festoon:// link.
+# https://github.com/dabane-ghassan/festoon
+
+UUID="festoon@dabane-ghassan.github.io"
+LINE="io.github.dabane_ghassan.Festoon.Line"
+LINE_PATH="/io/github/dabane_ghassan/Festoon/Line"
+SHELL_PATH="/io/github/dabane_ghassan/Festoon"
+SHELL_IFACE="io.github.dabane_ghassan.Festoon"
+INSTALLER="https://raw.githubusercontent.com/dabane-ghassan/festoon/main/install.sh"
+
+usage() {
+    cat <<USAGE
+Usage: festoon <command>
+
+  show | hide | toggle      bring the line down, or put it away
+  search                    bring it down to search
+  hang <file>...            hang pictures, videos or text files
+  hang -                    hang the text on standard input, as a note (or a link)
+  copy [n|id]               copy an item to the clipboard (default: the newest)
+  letgo [n|id]              take one item down
+  putback                   bring back what was let go last
+  clear                     take everything down
+  list                      what is on the line (n, kind, title)
+  state                     current state as JSON
+  items                     every item as JSON
+  restart                   restart the line
+  update                    install the latest version
+  app                       open the Festoon window (also: settings)
+
+Links work too:  xdg-open festoon://show   (hide, toggle, search, putback, clear, copy/<n>)
+USAGE
+}
+
+line() {
+    method="$1"; shift
+    gdbus call --session --dest "$LINE" --object-path "$LINE_PATH" --method "$LINE.$method" "$@" 2>/dev/null
+}
+
+shell() {
+    gdbus call --session --dest org.gnome.Shell --object-path "$SHELL_PATH" --method "$SHELL_IFACE.$1" 2>/dev/null
+}
+
+notify() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -a Festoon -i io.github.dabane_ghassan.Festoon "Festoon" "$1"
+    fi
+    echo "$1" >&2
+}
+
+need() {
+    line GetState >/dev/null && return 0
+    if ! command -v gnome-extensions >/dev/null 2>&1; then
+        notify "Festoon needs the GNOME desktop."
+        exit 1
+    fi
+    gnome-extensions enable "$UUID" >/dev/null 2>&1
+    sleep 2
+    line GetState >/dev/null && return 0
+    notify "Almost there: log out and back in once so GNOME loads Festoon. Then rest the pointer on the top bar."
+    exit 1
+}
+
+# ('<json>',) -> <json>
+unwrap() {
+    sed -e "s/^(['\"]//" -e "s/['\"],)\$//" -e 's/\\\\/\\/g' -e "s/\\\\'/'/g" -e 's/\\"/"/g'
+}
+
+ok() {
+    case "$1" in *true*) return 0 ;; *) return 1 ;; esac
+}
+
+cmd="$1"
+case "$cmd" in
+    festoon://*)
+        rest="${cmd#festoon://}"
+        cmd="${rest%%/*}"
+        arg=""
+        case "$rest" in */*) arg="${rest#*/}"; arg="${arg%%/*}";; esac
+        set -- "$cmd" "$arg"
+        ;;
+esac
+
+case "$cmd" in
+    show)     need; shell Show >/dev/null ;;
+    hide)     need; shell Hide >/dev/null ;;
+    toggle)   need; shell Toggle >/dev/null ;;
+    search)   need; shell Search >/dev/null ;;
+    hang)
+        need
+        shift
+        [ $# -gt 0 ] || { echo "festoon: hang what? a file, or - for standard input" >&2; exit 2; }
+        status=0
+        for f in "$@"; do
+            if [ "$f" = "-" ]; then
+                # through a file, so the text arrives exactly as it is
+                tmp="$(mktemp "${TMPDIR:-/tmp}/festoon-XXXXXX.txt")"
+                cat > "$tmp"
+                case "$(line HangFile "$tmp" file)" in
+                    *"''"*|"") echo "festoon: nothing to hang" >&2; status=1 ;;
+                esac
+                rm -f "$tmp"
+            elif [ -f "$f" ]; then
+                path="$(readlink -f "$f")"
+                case "$(line HangFile "$path" file)" in
+                    *"''"*|"") echo "festoon: could not hang $f" >&2; status=1 ;;
+                esac
+            else
+                echo "festoon: no such file: $f" >&2; status=1
+            fi
+        done
+        exit $status ;;
+    copy)     need; ok "$(line Copy "${2:-newest}")" || { echo "festoon: nothing to copy at '${2:-newest}'" >&2; exit 2; } ;;
+    letgo)    need; ok "$(line LetGo "${2:-newest}")" || { echo "festoon: no item '${2:-newest}'" >&2; exit 2; } ;;
+    putback)  need; ok "$(line PutBack)" || { echo "festoon: nothing to put back" >&2; exit 1; } ;;
+    clear)    need; line Clear >/dev/null ;;
+    state)    need; line GetState | unwrap; echo ;;
+    items)    need; line GetItems | unwrap; echo ;;
+    list)
+        need
+        line GetItems | unwrap | tr '{' '\n' | sed -n 's/.*"kind":"\([^"]*\)","title":"\([^"]*\)".*/\1\t\2/p' | awk '{ printf "%d\t%s\n", NR, $0 }' ;;
+    restart)  shell Restart >/dev/null ;;
+    update)
+        if command -v curl >/dev/null 2>&1; then
+            curl -fsSL "$INSTALLER" | sh
+        else
+            wget -qO- "$INSTALLER" | sh
+        fi ;;
+    app|settings|launch|"")
+        if [ -z "$cmd" ] && [ -t 1 ]; then usage; exit 0; fi
+        for dir in "${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID" \
+                   "/usr/share/gnome-shell/extensions/$UUID" \
+                   "$(dirname "$(readlink -f "$0")")/../extension"; do
+            if [ -f "$dir/app.js" ]; then
+                exec gjs -m "$dir/app.js"
+            fi
+        done
+        notify "Festoon's files are missing. Please install it again."
+        exit 1 ;;
+    -h|--help|help) usage ;;
+    *) usage >&2; exit 2 ;;
+esac
