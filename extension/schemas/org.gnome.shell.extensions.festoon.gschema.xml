@@ -45,6 +45,10 @@
       <default>true</default>
       <summary>Bring the line down when the pointer rests on the top bar</summary>
     </key>
+    <key name="reveal-edge-only" type="b">
+      <default>false</default>
+      <summary>Only when the pointer rests on the very top edge of the screen, not anywhere on the top bar</summary>
+    </key>
     <key name="reveal-delay" type="i">
       <range min="0" max="2000"/>
       <default>350</default>

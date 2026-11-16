@@ -18,7 +18,7 @@ const DELAYS = [[120, 'Right away'], [350, 'After a short rest'], [800, 'After a
 const SIZES = [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']];
 const RESET_KEYS = [
     'hang-screenshots', 'hang-recordings', 'watch-folders', 'tidy-screenshots', 'quiet-screenshots', 'hang-images',
-    'hang-text', 'hang-links', 'read-text', 'reveal-on-hover', 'reveal-delay', 'peek', 'max-items', 'size', 'rope',
+    'hang-text', 'hang-links', 'read-text', 'reveal-on-hover', 'reveal-edge-only', 'reveal-delay', 'peek', 'max-items', 'size', 'rope',
     'zoom-on-hover', 'sway', 'sounds', 'show-indicator', 'show-shortcut', 'search-shortcut',
 ];
 export const GESTURES = [
@@ -169,8 +169,20 @@ export class Pages {
         const page = new Adw.PreferencesPage({title: 'The Line', icon_name: 'view-more-horizontal-symbolic'});
 
         const coming = new Adw.PreferencesGroup({title: 'Coming down'});
-        coming.add(switchRow(settings, 'reveal-on-hover', 'Rest the pointer on the top bar',
-            'The line slides down from under it. Moving away puts it back up.'));
+        const HOVER = [
+            ['bar', 'Anywhere on the top bar'],
+            ['edge', 'Top edge only'],
+            ['off', 'Never'],
+        ];
+        const hoverMode = () => !settings.get_boolean('reveal-on-hover') ? 'off'
+            : settings.get_boolean('reveal-edge-only') ? 'edge' : 'bar';
+        const [hover, syncHover] = comboRow('Come down on hover', HOVER, hoverMode, v => {
+            settings.set_boolean('reveal-on-hover', v !== 'off');
+            settings.set_boolean('reveal-edge-only', v === 'edge');
+        }, 'Where the pointer rests to bring the line down. With Never, use the shortcut or the clothespin.');
+        for (const key of ['reveal-on-hover', 'reveal-edge-only'])
+            settings.connect(`changed::${key}`, syncHover);
+        coming.add(hover);
         const [delay, syncDelay] = comboRow('When', DELAYS, () => settings.get_int('reveal-delay'),
             v => settings.set_int('reveal-delay', v));
         settings.bind('reveal-on-hover', delay, 'sensitive', Gio.SettingsBindFlags.GET);

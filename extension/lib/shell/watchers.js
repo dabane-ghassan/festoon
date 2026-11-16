@@ -56,7 +56,9 @@ export class TopBarWatcher {
         if (mods & BUTTONS)
             return false;       // dragging a window to the top, say
         const top = Main.layoutManager.panelBox.get_transformed_position()[1];
-        return y <= top + 1 || !this._onButton(x, y);
+        if (y <= top + 1)
+            return true;
+        return !this._settings.get_boolean('reveal-edge-only') && !this._onButton(x, y);
     }
 
     _moved(x, y) {

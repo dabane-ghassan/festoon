@@ -102,6 +102,9 @@ class Indicator extends PanelMenu.Button {
             this._switches.push([key, item]);
         }
         this.menu.addMenuItem(hang);
+        this._hover = new PopupMenu.PopupSwitchMenuItem('Come Down on Hover', settings.get_boolean('reveal-on-hover'));
+        this._hover.connect('toggled', (_i, on) => settings.set_boolean('reveal-on-hover', on));
+        this.menu.addMenuItem(this._hover);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addAction('Festoon Settings…', () => this._ext.openApp());
         this.menu.connect('open-state-changed', (_m, open) => open && this.sync());
@@ -131,6 +134,7 @@ class Indicator extends PanelMenu.Button {
         this._clear.label.text = running && state.count ? `Take Everything Down (${state.count})` : 'Take Everything Down';
         for (const [key, item] of this._switches)
             item.setToggleState(settings.get_boolean(key));
+        this._hover.setToggleState(settings.get_boolean('reveal-on-hover'));
         if (state?.down)
             this.add_style_pseudo_class('checked');
         else

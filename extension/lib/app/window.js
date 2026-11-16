@@ -157,12 +157,13 @@ export function buildAppWindow(app, path, version, settings) {
         const n = s?.count ?? 0;
         state.label = !ready ? 'The line is not up yet' : n === 0 ? 'The line is empty' : n === 1 ? 'One thing on the line' : `${n} things on the line`;
         const keys = accelLabel(settings.get_strv('show-shortcut')[0]);
-        const how = settings.get_boolean('reveal-on-hover') ? 'Rest the pointer on the top bar' : 'Click the clothespin in the top bar';
+        const how = !settings.get_boolean('reveal-on-hover') ? 'Click the clothespin in the top bar'
+            : settings.get_boolean('reveal-edge-only') ? 'Push the pointer to the very top of the screen' : 'Rest the pointer on the top bar';
         detail.label = `${how}${keys ? `, or press ${keys}` : ''}, and it comes down.`;
         show.label = s?.down ? 'Put It Away' : 'Show the Line';
     };
     engine.watch(sync);
-    for (const key of ['show-shortcut', 'reveal-on-hover'])
+    for (const key of ['show-shortcut', 'reveal-on-hover', 'reveal-edge-only'])
         settings.connect(`changed::${key}`, () => sync(engine.state, engine.items));
 
     // ---------------------------------------------------------- layout

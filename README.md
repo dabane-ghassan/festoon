@@ -56,7 +56,9 @@ line are kept. Then log out and back in once more, because GNOME only loads new 
 | Right-click | Copy, Markup, Quick Look, Open, Show in Files, Save a Copy, Let Go |
 
 Resting on a top-bar button (the clock, the system menu) is left to that button, but the very top
-edge above it still works. The line stays out of the way of fullscreen windows, the overview and
+edge above it still works. In the app (*The Line → Come down on hover*) you can make it come down
+only at the very top edge, or never on hover; *Come Down on Hover* in the clothespin's menu turns
+it off and on quickly. The line stays out of the way of fullscreen windows, the overview and
 the top bar's own menus.
 
 ### What hangs
@@ -122,7 +124,7 @@ Everything on the line is drawn by one widget with GTK's scene graph. A few spri
 line drops and settles, items swing on their clips, slide along when one is added or let go, and
 grow under the pointer.
 
-- **Tested on GNOME 46.** GNOME 50 support was fixed from a user report and its source code; the suite has not been run there. The end-to-end suite in [`tests/`](tests/) passes on it (82 checks). It
+- **Tested on GNOME 46.** GNOME 50 support was fixed from a user report and its source code; the suite has not been run there. The end-to-end suite in [`tests/`](tests/) passes on it (84 checks). It
   runs a real headless GNOME Shell with a real app underneath and simulated mouse and keyboard
   input. It covers clicks passing through, copying, dragging into an app, search, Markup, the
   command and restarts. Versions 45 and 47 to 51 are declared as supported but have not been run.
