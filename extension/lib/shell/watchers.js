@@ -189,20 +189,25 @@ export class ClipboardWatcher {
 export class ScreenshotQuieter {
     constructor(settings) {
         this._settings = settings;
-        this._title = Gettext.dgettext('gnome-shell', 'Screenshot');
-        this._id = Main.messageTray.connect('source-added', (_t, source) => {
-            if (source.iconName !== 'screenshot-recorded-symbolic' || source.title !== this._title)
+        this._title = Gettext.dgettext('gnome-shell', 'Screenshot captured');
+        // GNOME 45-49 make a new source per screenshot; GNOME 50 keeps one "Screen Capture" source
+        for (const source of Main.messageTray.getSources?.() ?? [])
+            this._watch(source);
+        this._id = Main.messageTray.connect('source-added', (_t, source) => this._watch(source));
+    }
+
+    _watch(source) {
+        if (!['screenshot-recorded-symbolic', 'screenshooter-symbolic'].includes(source.iconName))
+            return;
+        source.connectObject?.('notification-added', (_s, notification) => {
+            if (!this._settings.get_boolean('quiet-screenshots') || notification.title !== this._title)
                 return;
-            source.connectObject?.('notification-added', (_s, notification) => {
-                if (!this._settings.get_boolean('quiet-screenshots'))
-                    return;
-                notification.acknowledged = true;       // no banner
-                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-                    notification.destroy();
-                    return GLib.SOURCE_REMOVE;
-                });
-            }, this);
-        });
+            notification.acknowledged = true;       // no banner
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                notification.destroy();
+                return GLib.SOURCE_REMOVE;
+            });
+        }, this);
     }
 
     destroy() {

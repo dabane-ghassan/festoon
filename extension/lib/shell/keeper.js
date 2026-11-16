@@ -92,7 +92,9 @@ export class Keeper {
             launcher.set_flags(Gio.SubprocessFlags.STDERR_MERGE);
         }
         try {
-            if (!Meta.is_wayland_compositor()) {
+            // GNOME 50 has no X11 session, and no Meta.is_wayland_compositor() either
+            const wayland = typeof Meta.is_wayland_compositor === 'function' ? Meta.is_wayland_compositor() : true;
+            if (!wayland) {
                 // X11 session: an ordinary process, found again by its pid
                 launcher.setenv('GDK_BACKEND', 'x11', true);
                 this._client = null;
@@ -159,7 +161,11 @@ export class Keeper {
             return;
         }
         this._window = win;
-        this._client?.hide_from_window_list?.(win);
+        // out of the overview and Alt+Tab: on the client up to GNOME 49, on the window from 50
+        if (win.hide_from_window_list)
+            win.hide_from_window_list();
+        else
+            this._client?.hide_from_window_list?.(win);
         win.make_above();
         win.stick();
         this._place();
