@@ -17,7 +17,8 @@ import {Store} from './store.js';
 import {LineView} from './view.js';
 
 const CSS = `
-window.festoon-line, window.festoon-line > * { background: none; box-shadow: none; }
+window.festoon-line, window.festoon-line.background, window.festoon-line.csd,
+window.festoon-line > *, window.festoon-line > * > * { background: none; background-color: transparent; background-image: none; box-shadow: none; border: none; }
 .festoon-search {
     background: rgba(27, 26, 23, 0.94);
     color: #F4EDE0;
@@ -95,8 +96,10 @@ export class Line {
             provider.load_from_string(CSS);
         else
             provider.load_from_data(CSS, -1);
+        // Above the user's own ~/.config/gtk-4.0/gtk.css too: a theme that paints every window
+        // must not paint this one, which has to stay see-through.
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            Gtk.STYLE_PROVIDER_PRIORITY_USER + 10);
 
         const win = new Gtk.Window({
             application: this._app, title: 'Festoon', decorated: false, resizable: true,

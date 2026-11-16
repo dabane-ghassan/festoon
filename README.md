@@ -69,6 +69,9 @@ the top bar's own menus.
 - **Web addresses** become a link showing the site and the path.
 - **Any folder you add**: new pictures and videos saved there hang too.
 
+The line itself can be cotton, jute, baker's twine, steel wire or fairy lights (in the app,
+under *The Line*).
+
 Each kind can be turned off, in the app or from the clothespin's menu. Nothing is ever kept from
 password managers (anything they mark as secret is skipped).
 
@@ -117,7 +120,7 @@ Everything on the line is drawn by one widget with GTK's scene graph. A few spri
 line drops and settles, items swing on their clips, slide along when one is added or let go, and
 grow under the pointer.
 
-- **Tested on GNOME 46.** GNOME 50 support was fixed from a user report and its source code; the suite has not been run there. The end-to-end suite in [`tests/`](tests/) passes on it (80 checks). It
+- **Tested on GNOME 46.** GNOME 50 support was fixed from a user report and its source code; the suite has not been run there. The end-to-end suite in [`tests/`](tests/) passes on it (82 checks). It
   runs a real headless GNOME Shell with a real app underneath and simulated mouse and keyboard
   input. It covers clicks passing through, copying, dragging into an app, search, Markup, the
   command and restarts. Versions 45 and 47 to 51 are declared as supported but have not been run.

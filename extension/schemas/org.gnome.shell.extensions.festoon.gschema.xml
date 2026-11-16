@@ -66,6 +66,13 @@
       <default>'medium'</default>
       <summary>Item size</summary>
     </key>
+    <key name="rope" type="s">
+      <choices>
+        <choice value="cotton"/><choice value="jute"/><choice value="twine"/><choice value="wire"/><choice value="lights"/>
+      </choices>
+      <default>'cotton'</default>
+      <summary>What the line is made of</summary>
+    </key>
     <key name="zoom-on-hover" type="b">
       <default>true</default>
       <summary>Items grow a little under the pointer</summary>

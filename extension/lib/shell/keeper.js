@@ -52,6 +52,7 @@ export class Keeper {
             }
         });
         this._connect(Main.layoutManager, 'monitors-changed', () => this._place());
+        this._connect(global.display, 'workareas-changed', () => this._place());
         this._connect(Main.layoutManager.panelBox, 'notify::height', () => this._place());
         this._connect(settings, 'changed::size', () => this._place());
 
@@ -171,6 +172,17 @@ export class Keeper {
         this._place();
         // a new window gets the keyboard; the line should not take it from you at login
         this._giveFocusBack();
+        // If anything else resizes it (a resolution change, a configure that crossed one), put
+        // it back to the full width of the screen.
+        win.connect('size-changed', () => {
+            if (this._placing)
+                return;
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                if (this._window === win && !this._fits(win))
+                    this._place();
+                return GLib.SOURCE_REMOVE;
+            });
+        });
         win.connect('unmanaged', () => {
             if (this._window === win)
                 this._window = null;
@@ -181,15 +193,30 @@ export class Keeper {
         return this._window;
     }
 
-    _place() {
-        const win = this._window;
+    /** Where the line belongs: the full width of the main screen, just under the top bar. */
+    _target() {
         const monitor = Main.layoutManager.primaryMonitor;
-        if (!win || !monitor)
-            return;
+        if (!monitor)
+            return null;
         const panel = Main.layoutManager.panelBox;
         const top = panel.visible ? panel.y + panel.height : monitor.y;
-        const height = lineHeight(this._settings.get_string('size'));
-        win.move_resize_frame(false, monitor.x, top, monitor.width, height);
+        return {x: monitor.x, y: top, width: monitor.width, height: lineHeight(this._settings.get_string('size'))};
+    }
+
+    _fits(win) {
+        const t = this._target();
+        const r = win.get_frame_rect();
+        return !t || (r.x === t.x && r.y === t.y && r.width === t.width && r.height === t.height);
+    }
+
+    _place() {
+        const win = this._window;
+        const t = this._target();
+        if (!win || !t || this._fits(win))
+            return;
+        this._placing = true;
+        win.move_resize_frame(false, t.x, t.y, t.width, t.height);
+        this._placing = false;
     }
 
     // ------------------------------------------------------------- talking to it
@@ -241,6 +268,7 @@ export class Keeper {
     }
 
     reveal(reason) {
+        this._place();
         this.call('Reveal', reason);
     }
 
@@ -250,6 +278,7 @@ export class Keeper {
     }
 
     toggle() {
+        this._place();
         this.call('Toggle');
     }
 

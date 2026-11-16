@@ -169,6 +169,8 @@ def run(rig, r):
     r.check("it is kept out of the overview and Alt+Tab", win["skip"], win)
     r.check("it spans the screen just under the top bar", win["x"] == 0 and win["w"] == 1280 and win["y"] == win["panel"], win)
     r.check("it never takes the keyboard while it is up", rig.js("global.display.focus_window !== global._t.ext().keeper.window"))
+    rig.js("global._t.ext().keeper.window.move_resize_frame(false, 0, 32, 700, 300); 1")
+    r.check("if something resizes it, it goes back to the full width", f.wait(lambda: rig.js("global._t.ext().keeper.window.get_frame_rect().width") == 1280, 3))
     r.check("the shell side knows the line's state", f.wait(lambda: json.loads(unwrap(f.shell("GetState")))["line"]["running"], 5))
     r.check("the line starts empty and up", f.state()["count"] == 0 and not f.state()["down"])
 
@@ -178,9 +180,15 @@ def run(rig, r):
     r.check("while it is up, clicks under it reach the window below", len(presses(f.probe())) == 1)
 
     print("coming down")
+    before = f.shot("00-up")
     f.rest_on_top_bar()
     r.check("resting on the top bar brings the line down", f.state()["down"] and f.state()["reason"] == "hover", f.state())
-    f.shot("01-empty-line")
+    after = f.shot("01-empty-line")
+    from PIL import Image
+    spot = (1100, 330)
+    r.check("it is see-through, even with a theme that paints every window",
+            Image.open(before).convert("RGB").getpixel(spot) == Image.open(after).convert("RGB").getpixel(spot),
+            (Image.open(before).convert("RGB").getpixel(spot), Image.open(after).convert("RGB").getpixel(spot)))
     rig.t("move(640, 90)", 0.6)
     r.check("it stays down while the pointer is on it", f.state()["down"])
     rig.t("click()")
@@ -440,6 +448,10 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     pathlib.Path("/tmp/festoon-line-test.log").unlink(missing_ok=True)
     rig = Rig(UUID, ROOT / "extension", env={"FESTOON_LINE_LOG": "/tmp/festoon-line-test.log"})
+    # a user theme that paints every window, as some do
+    css = rig.home / ".config/gtk-4.0/gtk.css"
+    css.parent.mkdir(parents=True)
+    css.write_text("window.background, window.background.csd, .background { background-color: #212121; }\n")
     r = Results()
     try:
         rig.start()

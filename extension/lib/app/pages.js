@@ -7,6 +7,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
+import {ROPES} from '../line/rope.js';
 import {captureFolders, dataDir} from '../settings.js';
 
 const SHORTCUTS = [
@@ -17,7 +18,7 @@ const DELAYS = [[120, 'Right away'], [350, 'After a short rest'], [800, 'After a
 const SIZES = [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']];
 const RESET_KEYS = [
     'hang-screenshots', 'hang-recordings', 'watch-folders', 'tidy-screenshots', 'quiet-screenshots', 'hang-images',
-    'hang-text', 'hang-links', 'read-text', 'reveal-on-hover', 'reveal-delay', 'peek', 'max-items', 'size',
+    'hang-text', 'hang-links', 'read-text', 'reveal-on-hover', 'reveal-delay', 'peek', 'max-items', 'size', 'rope',
     'zoom-on-hover', 'sway', 'sounds', 'show-indicator', 'show-shortcut', 'search-shortcut',
 ];
 export const GESTURES = [
@@ -183,6 +184,9 @@ export class Pages {
         const [size, syncSize] = comboRow('Size', SIZES, () => settings.get_string('size'), v => settings.set_string('size', v));
         settings.connect('changed::size', syncSize);
         look.add(size);
+        const [rope, syncRope] = comboRow('Line', ROPES, () => settings.get_string('rope'), v => settings.set_string('rope', v));
+        settings.connect('changed::rope', syncRope);
+        look.add(rope);
         look.add(switchRow(settings, 'zoom-on-hover', 'Grow under the pointer'));
         look.add(switchRow(settings, 'sway', 'Sway on the clips'));
         look.add(switchRow(settings, 'sounds', 'Sounds', 'A clip when something hangs, a tick when you copy.'));

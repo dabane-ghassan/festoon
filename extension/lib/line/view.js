@@ -15,6 +15,7 @@ import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 
 import {SIZES} from '../common.js';
+import {drawRope} from './rope.js';
 import {linkParts} from './store.js';
 
 const KIND_NAMES = {screenshot: 'Screenshot', image: 'Image', recording: 'Recording', note: 'Note', link: 'Link'};
@@ -158,6 +159,7 @@ class LineView extends Gtk.Widget {
         this._controllers();
         for (const key of ['size', 'zoom-on-hover', 'sway'])
             settings.connect(`changed::${key}`, () => this._relayout());
+        settings.connect('changed::rope', () => this.queue_draw());
     }
 
     get size() {
@@ -681,7 +683,8 @@ class LineView extends Gtk.Widget {
     _loadPin() {
         try {
             const path = GLib.build_filenamev([this._dir, 'assets', 'pin.svg']);
-            const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, 40, 104);
+            // at three times the largest size it is drawn, so it stays sharp at any scale
+            const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(path, 120, 312);
             this._pin = Gdk.Texture.new_for_pixbuf(pixbuf);
         } catch (e) {
             console.warn(`Festoon: no clip picture: ${e.message}`);
@@ -733,37 +736,11 @@ class LineView extends Gtk.Widget {
 
     _drawRope(s, W) {
         const y0 = this.lineY;
-        const H = this._ropeY(W / 2) + 8;
+        const H = this._ropeY(W / 2) + 30;
         if (y0 + H < 0)
             return;
-        const cr = s.append_cairo(rect(0, Math.max(0, y0 - 4), W, H + 12));
-        const path = () => {
-            cr.moveTo(-10, this._ropeY(0) + y0);
-            const n = 48;
-            for (let i = 1; i <= n; i++) {
-                const x = W * i / n;
-                cr.lineTo(x, this._ropeY(x) + y0);
-            }
-            cr.lineTo(W + 10, this._ropeY(W) + y0);
-        };
-        cr.setLineCap(1);
-        // shadow, cord, and the twist of the fibres
-        cr.save();
-        cr.translate(0, 3);
-        path();
-        cr.setSourceRGBA(0, 0, 0, 0.22);
-        cr.setLineWidth(3.2);
-        cr.stroke();
-        cr.restore();
-        path();
-        cr.setSourceRGB(0.93, 0.90, 0.84);
-        cr.setLineWidth(2.6);
-        cr.stroke();
-        path();
-        cr.setSourceRGBA(0.55, 0.50, 0.43, 0.7);
-        cr.setLineWidth(1.0);
-        cr.setDash([2.2, 3.4], 0);
-        cr.stroke();
+        const cr = s.append_cairo(rect(0, Math.max(0, y0), W, H + 8));
+        drawRope(cr, x => this._ropeY(x) + y0, -10, W + 10, this._settings.get_string('rope'), this.reveal.value);
         cr.$dispose();
     }
 
