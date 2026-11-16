@@ -41,6 +41,15 @@ export class Keeper {
             const focus = global.display.focus_window;
             if (focus && focus !== this._window)
                 this._lastFocus = focus;
+            // The line only ever needs the keyboard while it is down (to search, say). A window
+            // that maps gets focus by default, which would leave your typing going nowhere.
+            if (focus && focus === this._window && !this.state?.down) {
+                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    if (global.display.focus_window === this._window && !this.state?.down)
+                        this._giveFocusBack();
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
         });
         this._connect(Main.layoutManager, 'monitors-changed', () => this._place());
         this._connect(Main.layoutManager.panelBox, 'notify::height', () => this._place());

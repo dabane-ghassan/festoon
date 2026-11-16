@@ -168,6 +168,7 @@ def run(rig, r):
     r.check("it stays above other windows, on every workspace", win["above"] and win["all"], win)
     r.check("it is kept out of the overview and Alt+Tab", win["skip"], win)
     r.check("it spans the screen just under the top bar", win["x"] == 0 and win["w"] == 1280 and win["y"] == win["panel"], win)
+    r.check("it never takes the keyboard while it is up", rig.js("global.display.focus_window !== global._t.ext().keeper.window"))
     r.check("the shell side knows the line's state", f.wait(lambda: json.loads(unwrap(f.shell("GetState")))["line"]["running"], 5))
     r.check("the line starts empty and up", f.state()["count"] == 0 and not f.state()["down"])
 

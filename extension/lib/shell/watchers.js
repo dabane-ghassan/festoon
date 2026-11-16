@@ -21,7 +21,7 @@ export class TopBarWatcher {
         this._indicator = indicator;
         this._inside = false;
         this._dwell = 0;
-        this._watch = PointerWatcher.getPointerWatcher().addWatch(50, (x, y) => this._moved(x, y));
+        this._watch = PointerWatcher.getPointerWatcher().addWatch(80, (x, y) => this._moved(x, y));
         this._overview = Main.overview.connect('showing', () => keeper.tuck());
     }
 
