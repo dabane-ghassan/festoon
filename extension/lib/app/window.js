@@ -76,7 +76,6 @@ export function buildAppWindow(app, path, version, settings) {
     const view = new LineView(settings, path);
     view.set_size_request(-1, 270);
     view.vexpand = false;
-    view.message = 'Take a screenshot or copy something: it hangs here.';
     view.onAction = (action, item) => {
         if (action === 'copy') {
             engine.line('Copy', item.id);

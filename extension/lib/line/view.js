@@ -15,7 +15,7 @@ import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 
 import {SIZES} from '../common.js';
-import {drawRope} from './rope.js';
+import {drawClip, drawRope} from './rope.js';
 import {linkParts} from './store.js';
 
 const KIND_NAMES = {screenshot: 'Screenshot', image: 'Image', recording: 'Recording', note: 'Note', link: 'Link'};
@@ -147,7 +147,6 @@ class LineView extends Gtk.Widget {
         this._tick = 0;
         this._last = 0;
         this._pin = null;
-        this.message = '';              // shown when the line is empty
 
         // callbacks set by the line controller
         this.onAction = null;           // (action, item, extra) => void
@@ -704,8 +703,6 @@ class LineView extends Gtk.Widget {
         if (this.reveal.value <= 0.001 && !this._dying.length)
             return;
         this._drawRope(s, W);
-        if (!this.cards.size && this.reveal.value > 0.02)
-            this._drawEmpty(s, W);
         for (const card of this._drawOrder()) {
             if (card.alpha.value <= 0.01)
                 continue;
@@ -740,26 +737,13 @@ class LineView extends Gtk.Widget {
         if (y0 + H < 0)
             return;
         const cr = s.append_cairo(rect(0, Math.max(0, y0), W, H + 8));
-        drawRope(cr, x => this._ropeY(x) + y0, -10, W + 10, this._settings.get_string('rope'), this.reveal.value);
+        try {
+            drawRope(cr, x => this._ropeY(x) + y0, -10, W + 10, this._settings.get_string('rope'), this.reveal.value);
+        } catch (e) {
+            // a broken line style must never hide what hangs on it
+            logError(e, 'Festoon: drawing the line');
+        }
         cr.$dispose();
-    }
-
-    _drawEmpty(s, W) {
-        const text = this.message || 'Screenshots and the things you copy hang here.';
-        const layout = this._text(text, 0.92, Pango.Weight.MEDIUM);
-        const [, logical] = layout.get_pixel_extents();
-        const w = logical.width + 26;
-        const h = logical.height + 14;
-        const x = W / 2 - w / 2;
-        const y = this._ropeY(W / 2) + this.lineY + 12;
-        s.append_outset_shadow(rounded(x, y, w, h, h / 2), SHADOW, 0, 3, 0, 10);
-        s.push_rounded_clip(rounded(x, y, w, h, h / 2));
-        s.append_color(rgba(27, 26, 23, 0.92), rect(x, y, w, h));
-        s.pop();
-        s.save();
-        s.translate(point(x + 13, y + 7));
-        s.append_layout(layout, rgba(244, 237, 224));
-        s.restore();
     }
 
     _text(text, scale, weight = Pango.Weight.NORMAL, family = null) {
@@ -797,11 +781,20 @@ class LineView extends Gtk.Widget {
         }
 
         // the clip, gripping the top of the card and the cord
-        if (this._pin) {
-            const pw = Math.round(this.size * 0.12 + 3);
-            const ph = Math.round(pw * 2.6);
-            s.append_texture(this._pin, rect(-pw / 2, -ph * 0.42, pw, ph));
+        const pw = Math.round(this.size * 0.12 + 3);
+        const ph = Math.round(pw * 2.6);
+        const style = this._settings.get_string('rope');
+        card.seed ??= [...card.item.id].reduce((a, c) => a + c.charCodeAt(0), 0);
+        const cr = s.append_cairo(rect(-pw * 2, -ph, pw * 4, ph * 2));
+        let drawn = false;
+        try {
+            drawn = drawClip(cr, style, pw, ph, card.seed);
+        } catch (e) {
+            logError(e, 'Festoon: drawing a clip');
         }
+        cr.$dispose();
+        if (!drawn && this._pin)
+            s.append_texture(this._pin, rect(-pw / 2, -ph * 0.42, pw, ph));
 
         if (flat)
             return;

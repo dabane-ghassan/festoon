@@ -69,6 +69,7 @@
     <key name="rope" type="s">
       <choices>
         <choice value="cotton"/><choice value="jute"/><choice value="twine"/><choice value="wire"/><choice value="lights"/>
+        <choice value="licorice"/><choice value="spaghetti"/><choice value="bunting"/><choice value="paperclips"/><choice value="dna"/>
       </choices>
       <default>'cotton'</default>
       <summary>What the line is made of</summary>

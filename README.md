@@ -69,8 +69,10 @@ the top bar's own menus.
 - **Web addresses** become a link showing the site and the path.
 - **Any folder you add**: new pictures and videos saved there hang too.
 
-The line itself can be cotton, jute, baker's twine, steel wire or fairy lights (in the app,
-under *The Line*).
+The line comes in ten styles, each with its own clips (in the app, under *The Line → Look*):
+cotton or jute with wooden pegs, baker's twine with candy-striped pegs, steel wire with binder
+clips, fairy lights, red licorice held by gummy bears, spaghetti with meatballs, party bunting
+with rainbow pegs, a paperclip chain, and a DNA double helix.
 
 Each kind can be turned off, in the app or from the clothespin's menu. Nothing is ever kept from
 password managers (anything they mark as secret is skipped).
