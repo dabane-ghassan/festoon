@@ -175,8 +175,10 @@ export class Line {
             return;
         const W = this.window.get_width() || 4000;
         let bottom = 0;
+        // the whole band while it is down or moving: changing the region on every frame of the
+        // drop would cost a round trip to the compositor each time
         if (!this.view.isHidden)
-            bottom = Math.max(0, Math.round(this.view.bandBottom + Math.min(0, this.view.lineY)));
+            bottom = Math.max(0, Math.round(this.view.bandBottom));
         if (this._searchBox.visible)
             bottom = Math.max(bottom, 56);
         const key = `${W}x${bottom}`;

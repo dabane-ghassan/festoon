@@ -15,10 +15,12 @@ import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 
 import {SIZES} from '../common.js';
-import {drawClip, drawRope} from './rope.js';
+import {CLIP_FOR, drawClip, drawRope} from './rope.js';
 import {linkParts} from './store.js';
 
 const KIND_NAMES = {screenshot: 'Screenshot', image: 'Image', recording: 'Recording', note: 'Note', link: 'Link'};
+// FESTOON_PROFILE=1 prints how long frames take to draw and how far apart they come
+const PROFILE = !!GLib.getenv('FESTOON_PROFILE');
 const GAP = 26;
 const MARGIN = 64;
 const ROPE_TOP = 20;
@@ -137,9 +139,8 @@ class LineView extends Gtk.Widget {
         this.cards = new Map();
         this._order = [];               // ids, newest first, as on the line
         this._dying = [];               // cards falling off
-        this.reveal = new Spring(0, 150, 15.5);
+        this.reveal = new Spring(0, 170, 22.5);      // damping ratio ~0.86: one soft settle, no wobble
         this.scroll = new Spring(0, 220, 30);
-        this._bob = new Spring(0, 90, 6);
         this._filter = null;            // Set of ids while searching
         this._pointer = null;           // [x, y] in widget coordinates
         this._pointerV = 0;
@@ -158,7 +159,12 @@ class LineView extends Gtk.Widget {
         this._controllers();
         for (const key of ['size', 'zoom-on-hover', 'sway'])
             settings.connect(`changed::${key}`, () => this._relayout());
-        settings.connect('changed::rope', () => this.queue_draw());
+        settings.connect('changed::rope', () => {
+            this.queue_draw();
+            this.warm();
+        });
+        // cached drawings depend on the size and scale
+        settings.connect('changed::size', () => this._cache?.clear());
     }
 
     get size() {
@@ -231,6 +237,7 @@ class LineView extends Gtk.Widget {
                     card.texture = Gdk.Texture.new_for_pixbuf(pixbuf);
                     card.aspect = pixbuf.get_width() / pixbuf.get_height();
                     this._relayout();
+                    this.warm();
                 } catch (_e) {
                     // not a picture after all: drawn as a blank frame
                 }
@@ -345,7 +352,7 @@ class LineView extends Gtk.Widget {
         const W = this.get_width() || 1200;
         const u = Math.min(1, Math.max(0, x / W));
         const sag = Math.min(24, Math.max(8, W * 0.011));
-        return ROPE_TOP + (sag + this._bob.value) * 4 * u * (1 - u);
+        return ROPE_TOP + sag * 4 * u * (1 - u);
     }
 
     /** Distance the whole line is pulled up when tucked away. */
@@ -420,7 +427,6 @@ class LineView extends Gtk.Widget {
             // every item swings a little as the line drops and stops
             for (const card of this.cards.values())
                 card.swing.v += (Math.random() - 0.5) * (this._settings.get_boolean('sway') ? 1.4 : 0);
-            this._bob.v += 30;
         }
         this.reveal.target = down ? 1 : 0;
         if (!down)
@@ -477,14 +483,42 @@ class LineView extends Gtk.Widget {
 
     _step(clock) {
         const now = clock.get_frame_time();
-        const dt = this._last ? Math.min(1 / 30, (now - this._last) / 1e6) : 1 / 60;
+        if (PROFILE && this._last && this.reveal.target === 1 && !this.reveal.settled) {
+            this._gaps = (this._gaps ?? []).concat([(now - this._last) / 1000]);
+            if (this._gaps.length >= 20) {
+                const a = this._gaps.sort((x, y) => x - y);
+                print(`festoon-profile frame gap median ${a[10].toFixed(1)} ms, worst ${a[19].toFixed(1)} ms`);
+                this._gaps = [];
+            }
+        }
+        // Follow the clock, not the frame count: if a frame comes late, the next one shows where
+        // things are by now, instead of the motion slowing down and then jumping. Small fixed
+        // steps keep the springs stable however long the gap was.
+        const elapsed = this._last ? Math.min(0.25, (now - this._last) / 1e6) : 1 / 60;
         this._last = now;
+        const steps = Math.max(1, Math.ceil(elapsed / (1 / 240)));
+        const dt = elapsed / steps;
+        let busy = false;
+        for (let i = 0; i < steps; i++)
+            busy = this._physics(dt);
+        if (this._pointer)
+            this._updateHover();
+        this.queue_draw();
+        this.onFrame?.();
+        if (!busy) {
+            this._tick = 0;
+            return GLib.SOURCE_REMOVE;
+        }
+        return GLib.SOURCE_CONTINUE;
+    }
+
+    /** Move everything on by dt seconds. Returns whether anything is still moving. */
+    _physics(dt) {
         const sway = this._settings.get_boolean('sway');
 
         this.reveal.step(dt);
         this.scroll.step(dt);
-        this._bob.step(dt);
-        let busy = !this.reveal.settled || !this.scroll.settled || !this._bob.settled;
+        let busy = !this.reveal.settled || !this.scroll.settled;
 
         for (const card of this.cards.values()) {
             const before = card.x.value;
@@ -516,16 +550,7 @@ class LineView extends Gtk.Widget {
         const H = this.get_height();
         this._dying = this._dying.filter(c => c.falling.y < H + 40 && c.alpha.value > 0.02);
         busy ||= this._dying.length > 0;
-
-        if (this._pointer)
-            this._updateHover();
-        this.queue_draw();
-        this.onFrame?.();
-        if (!busy) {
-            this._tick = 0;
-            return GLib.SOURCE_REMOVE;
-        }
-        return GLib.SOURCE_CONTINUE;
+        return busy;
     }
 
     // ------------------------------------------------------------- input
@@ -693,9 +718,25 @@ class LineView extends Gtk.Widget {
     vfunc_size_allocate(width, height, baseline) {
         super.vfunc_size_allocate(width, height, baseline);
         this._relayout();
+        this.warm();
     }
 
     vfunc_snapshot(s) {
+        if (PROFILE) {
+            const t0 = GLib.get_monotonic_time();
+            this._snapshot(s);
+            this._prof = (this._prof ?? []).concat([(GLib.get_monotonic_time() - t0) / 1000]);
+            if (this._prof.length >= 30) {
+                const a = this._prof.sort((x, y) => x - y);
+                print(`festoon-profile snapshot median ${a[15].toFixed(2)} ms, worst ${a[29].toFixed(2)} ms`);
+                this._prof = [];
+            }
+            return;
+        }
+        this._snapshot(s);
+    }
+
+    _snapshot(s) {
         const W = this.get_width();
         // GTK sends nothing to the compositor for a frame with nothing in it, and a window that
         // has never had a frame is never shown: keep one invisible pixel.
@@ -731,19 +772,85 @@ class LineView extends Gtk.Widget {
         s.restore();
     }
 
-    _drawRope(s, W) {
-        const y0 = this.lineY;
-        const H = this._ropeY(W / 2) + 30;
-        if (y0 + H < 0)
+    /** Pixels per logical pixel, fractional scaling included. */
+    /**
+     * Get everything onto the graphics card before the line first comes down: the cord, the
+     * clips and every picture. Otherwise the first frames of the first drop are spent on that.
+     */
+    warm() {
+        if (this._warmId)
             return;
-        const cr = s.append_cairo(rect(0, Math.max(0, y0), W, H + 8));
+        this._warmId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+            this._warmId = 0;
+            const renderer = this.get_native()?.get_renderer();
+            const W = this.get_width();
+            if (!renderer || !W)
+                return GLib.SOURCE_REMOVE;
+            // draw it all once, off screen, where nothing is cut away (a tiny viewport would let
+            // the renderer skip the work we want done ahead of time)
+            const snap = new Gtk.Snapshot();
+            this._drawRope(snap, W, true);
+            let x = 0;
+            for (const card of this.cards.values()) {
+                snap.save();
+                snap.translate(point(x + card.w / 2 + 20, 60));
+                this._drawCard(snap, card, false);
+                snap.restore();
+                x = (x + card.w + 40) % Math.max(1, W - 300);
+            }
+            const node = snap.to_node();
+            if (node)
+                renderer.render_texture(node, null);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    get _scale() {
+        const surface = this.get_native()?.get_surface();
+        return surface?.get_scale?.() ?? this.get_scale_factor();
+    }
+
+    /**
+     * Draw something once into a texture at the screen's scale, and reuse it every frame:
+     * moving a texture costs nothing, while redrawing a cord as wide as the screen with
+     * cairo on every frame is what made the line stutter as it came down.
+     */
+    _cached(key, w, h, draw, oversample = 1) {
+        this._cache ??= new Map();
+        const hit = this._cache.get(key);
+        if (hit)
+            return hit;
+        const renderer = this.get_native()?.get_renderer();
+        if (!renderer)
+            return null;
+        const k = this._scale * oversample;
+        const snap = new Gtk.Snapshot();
+        snap.scale(k, k);
+        const cr = snap.append_cairo(rect(0, 0, w, h));
         try {
-            drawRope(cr, x => this._ropeY(x) + y0, -10, W + 10, this._settings.get_string('rope'), this.reveal.value);
+            draw(cr);
         } catch (e) {
-            // a broken line style must never hide what hangs on it
-            logError(e, 'Festoon: drawing the line');
+            logError(e, 'Festoon: drawing');
         }
         cr.$dispose();
+        const node = snap.to_node();
+        const texture = node ? renderer.render_texture(node, rect(0, 0, Math.ceil(w * k), Math.ceil(h * k))) : null;
+        if (this._cache.size > 64)
+            this._cache.clear();
+        this._cache.set(key, texture);
+        return texture;
+    }
+
+    _drawRope(s, W, always = false) {
+        const y0 = always ? 0 : this.lineY;
+        const H = Math.ceil(this._ropeY(W / 2) + 34);
+        if (y0 + H < 0)
+            return;
+        const style = this._settings.get_string('rope');
+        const texture = this._cached(`rope|${style}|${W}|${this._scale}`, W, H,
+            cr => drawRope(cr, x => this._ropeY(x), -10, W + 10, style, 1));
+        if (texture)
+            s.append_texture(texture, rect(0, y0, W, H));
     }
 
     _text(text, scale, weight = Pango.Weight.NORMAL, family = null) {
@@ -785,15 +892,19 @@ class LineView extends Gtk.Widget {
         const ph = Math.round(pw * 2.6);
         const style = this._settings.get_string('rope');
         card.seed ??= [...card.item.id].reduce((a, c) => a + c.charCodeAt(0), 0);
-        const cr = s.append_cairo(rect(-pw * 2, -ph, pw * 4, ph * 2));
-        let drawn = false;
-        try {
-            drawn = drawClip(cr, style, pw, ph, card.seed);
-        } catch (e) {
-            logError(e, 'Festoon: drawing a clip');
+        // clips come in up to six colours: one texture each, drawn at 1.5x so they stay sharp
+        // when an item grows under the pointer
+        const variant = card.seed % 60;     // 60: whole cycles of 4, 5 and 6 colours
+        const wood = (CLIP_FOR[style] ?? 'wood') === 'wood';
+        if (!wood) {
+            const clip = this._cached(`clip|${style}|${variant}|${pw}|${this._scale}`, pw * 4, ph * 2, cr => {
+                cr.translate(pw * 2, ph);
+                drawClip(cr, style, pw, ph, variant);
+            }, 1.5);
+            if (clip)
+                s.append_texture(clip, rect(-pw * 2, -ph, pw * 4, ph * 2));
         }
-        cr.$dispose();
-        if (!drawn && this._pin)
+        if (wood && this._pin)
             s.append_texture(this._pin, rect(-pw / 2, -ph * 0.42, pw, ph));
 
         if (flat)
@@ -821,7 +932,11 @@ class LineView extends Gtk.Widget {
             cr.$dispose();
 
             const caption = this._caption(card);
-            const layout = this._text(caption, 0.78, Pango.Weight.MEDIUM);
+            if (card.captionText !== caption) {
+                card.captionText = caption;
+                card.captionLayout = this._text(caption, 0.78, Pango.Weight.MEDIUM);
+            }
+            const layout = card.captionLayout;
             const [, logical] = layout.get_pixel_extents();
             const cw = logical.width + 16;
             const ch = logical.height + 6;
@@ -839,7 +954,8 @@ class LineView extends Gtk.Widget {
         if (card.flash > 0) {
             const a = Math.min(1, card.flash * 3);
             s.push_opacity(a);
-            const layout = this._text('Copied', 0.9, Pango.Weight.BOLD);
+            this._copiedLayout ??= this._text('Copied', 0.9, Pango.Weight.BOLD);
+            const layout = this._copiedLayout;
             const [, logical] = layout.get_pixel_extents();
             const fw = logical.width + 22;
             const fh = logical.height + 10;
@@ -1025,6 +1141,9 @@ class LineView extends Gtk.Widget {
         if (this._tick)
             this.remove_tick_callback(this._tick);
         this._tick = 0;
+        if (this._warmId)
+            GLib.source_remove(this._warmId);
+        this._warmId = 0;
         for (const card of this.cards.values())
             card.media?.set_playing(false);
     }

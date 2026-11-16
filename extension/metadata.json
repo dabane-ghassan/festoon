@@ -2,7 +2,7 @@
   "uuid": "festoon@dabane-ghassan.github.io",
   "name": "Festoon",
   "description": "Your screenshots and the things you copy, hung on a line just under the top bar. Rest the pointer on the top bar to bring it down. Click to copy, drag into any app.",
-  "version-name": "1.2.0",
+  "version-name": "1.2.1",
   "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
   "url": "https://github.com/dabane-ghassan/festoon",
   "settings-schema": "org.gnome.shell.extensions.festoon"
