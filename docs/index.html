@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Festoon: a line for your screenshots and copies, on GNOME</title>
+<meta name="description" content="Festoon hangs your screenshots, screen recordings and everything you copy on a line under the GNOME top bar. Rest the pointer on the top bar to bring it down; click to copy, drag into any app. Free and open source.">
+<meta name="theme-color" content="#2F6FDE">
+<link rel="canonical" href="https://dabane-ghassan.github.io/festoon/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Festoon: a line for your screenshots and copies">
+<meta property="og:description" content="Screenshots and the things you copy, hung on a line under the GNOME top bar. Click to copy, drag into any app.">
+<meta property="og:image" content="https://dabane-ghassan.github.io/festoon/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --paper: #F6F1E7;
+  --ink: #17161B;
+  --soft: rgba(23, 22, 27, .64);
+  --blue: #2F6FDE;
+  --cream: #FFF6E6;
+  --note: #FFFBEA;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --text: "Instrument Sans", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 400 17px/1.55 var(--text); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 8px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 clamp(14px, 3vw, 28px); }
+
+nav { display: flex; align-items: center; gap: 10px; height: 68px; }
+nav img { width: 34px; height: 34px; border-radius: 9px; }
+nav strong { font: 800 19px/1 var(--display); letter-spacing: -.02em; }
+nav a { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; font-size: 15px; text-decoration: none; padding: 9px 14px; border-radius: 999px; }
+nav a:hover { background: rgba(23, 22, 27, .07); }
+nav svg { width: 18px; height: 18px; fill: currentColor; }
+
+.stage {
+  position: relative; overflow: hidden; border-radius: clamp(22px, 3vw, 38px);
+  background: var(--blue); color: var(--cream);
+  min-height: min(780px, calc(100vh - 96px)); padding: 250px clamp(20px, 5vw, 64px) 120px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.stage::before, .stage::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
+.stage::before { width: 62vmax; height: 62vmax; left: -22vmax; bottom: -40vmax; background: #2763CC; }
+.stage::after { width: 40vmax; height: 40vmax; right: -14vmax; top: -24vmax; background: #3C7BE8; }
+.stage > * { position: relative; z-index: 1; }
+.bar { position: absolute; z-index: 3; left: 0; right: 0; top: 0; height: 30px; background: #111; color: #fff; display: flex; align-items: center; justify-content: center; font: 600 13px/1 var(--text); }
+.bar span { position: absolute; right: 16px; opacity: .8; }
+.bar .hint { left: 16px; right: auto; opacity: .55; font-weight: 500; }
+h1 { margin: 0; max-width: 13ch; font: 800 clamp(44px, 8.4vw, 116px)/.92 var(--display); letter-spacing: -.045em; text-wrap: balance; }
+.lede { margin: clamp(18px, 3vh, 30px) 0 0; max-width: 36ch; font-size: clamp(18px, 2vw, 22px); line-height: 1.45; color: rgba(255, 246, 230, .9); text-wrap: pretty; }
+.cmd {
+  margin-top: clamp(24px, 4vh, 40px); max-width: 100%;
+  display: flex; align-items: center; gap: 6px; padding: 7px 7px 7px 20px;
+  background: var(--ink); color: var(--cream); border-radius: 999px;
+  box-shadow: 0 14px 34px -14px rgba(0, 20, 60, .6);
+}
+.cmd code { font: 500 clamp(11.5px, 1.5vw, 14.5px)/1 var(--mono); white-space: nowrap; overflow-x: auto; scrollbar-width: none; padding: 12px 0; }
+.cmd code::before { content: "$ "; color: #8FB4FF; }
+.cmd button { all: unset; box-sizing: border-box; flex: none; padding: 10px 18px; border-radius: 999px; background: var(--cream); color: var(--ink); font: 600 14px/1 var(--text); min-width: 74px; text-align: center; cursor: pointer; }
+.cmd button:hover { background: #fff; }
+.fine { margin: 16px 0 0; font-size: 14.5px; color: rgba(255, 246, 230, .82); max-width: 48ch; }
+.picker { position: absolute; z-index: 2; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 5px; background: rgba(23, 22, 27, .9); border-radius: 18px; }
+.picker button { all: unset; box-sizing: border-box; height: 42px; padding: 0 16px; border-radius: 13px; display: inline-flex; align-items: center; gap: 8px; color: var(--cream); font: 600 14px/1 var(--text); white-space: nowrap; cursor: pointer; }
+.picker button:hover { background: rgba(255, 246, 230, .14); }
+.picker svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* the line */
+#line { position: absolute; z-index: 2; left: 0; right: 0; top: 30px; height: 230px; pointer-events: none; }
+#line svg.rope { position: absolute; inset: 0; width: 100%; height: 60px; overflow: visible; }
+.card { position: absolute; top: 0; transform-origin: 50% 0; pointer-events: auto; cursor: pointer; will-change: transform; }
+.card .body { margin-top: 6px; border-radius: 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, .32); overflow: hidden; text-align: left; color: var(--ink); }
+.card.picture .body { background: rgba(250, 250, 252, .62); padding: 4px; border: 1px solid rgba(255, 255, 255, .7); }
+.card.picture img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.card.note .body { background: var(--note); border-top: 4px solid #F5C542; border-radius: 7px; padding: 9px 10px; font-size: 12px; line-height: 1.35; }
+.card.note b { display: block; font-size: 13.5px; margin-bottom: 3px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.card.note i { font-style: normal; color: rgba(23, 22, 27, .58); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.card.link .body { background: #fff; display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+.card.link .dot { flex: none; width: 34px; height: 34px; border-radius: 50%; color: #fff; display: grid; place-items: center; font: 800 17px/1 var(--display); }
+.card.link b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.link i { display: block; font-style: normal; font-size: 12px; color: rgba(23, 22, 27, .58); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .pin { position: absolute; left: 50%; top: -14px; width: 11px; height: 30px; transform: translateX(-50%); background: url(assets/pin.svg) center / contain no-repeat; }
+.card .x { position: absolute; right: -7px; top: -1px; width: 20px; height: 20px; border-radius: 50%; background: rgba(27, 26, 23, .9); color: #fff; display: grid; place-items: center; font: 600 13px/1 var(--text); opacity: 0; transition: opacity .15s; }
+.card:hover .x { opacity: 1; }
+.card .tag { position: absolute; left: 50%; bottom: -30px; transform: translateX(-50%); white-space: nowrap; background: rgba(27, 26, 23, .88); color: var(--cream); border-radius: 999px; padding: 3px 9px; font: 500 11.5px/1.3 var(--text); opacity: 0; transition: opacity .15s; }
+.card:hover .tag { opacity: 1; }
+.card .copied { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -30%); background: rgba(27, 26, 23, .92); color: #fff; padding: 5px 11px; border-radius: 999px; font: 700 12.5px/1.2 var(--text); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.card.flash .copied { opacity: 1; transition: none; }
+
+.does { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.does div { background: #fff; border-radius: 26px; padding: 26px 24px 28px; }
+.does .ico { font-size: 34px; margin-bottom: 8px; display: block; }
+h2 { margin: 0 0 4px; font: 800 24px/1.1 var(--display); letter-spacing: -.025em; }
+.does p { margin: 0; color: var(--soft); font-size: 16px; }
+@media (max-width: 900px) { .does { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .does { grid-template-columns: minmax(0, 1fr); } }
+.more { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+.more > div { border-radius: 26px; padding: 30px 28px; }
+.keys { background: var(--ink); color: var(--cream); }
+.keys dl { margin: 14px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: baseline; font-size: 16px; }
+.keys dt { white-space: nowrap; }
+.keys dd { margin: 0; color: rgba(255, 246, 230, .74); }
+kbd { font: 600 13px/1 var(--text); padding: 5px 8px; border-radius: 8px; background: rgba(255, 246, 230, .14); color: var(--cream); }
+.setup { background: #fff; }
+.setup ul { margin: 14px 0 0; padding-left: 0; list-style: none; }
+.setup li { margin-bottom: 10px; color: var(--soft); }
+.setup li strong { color: var(--ink); font-weight: 600; }
+@media (max-width: 820px) { .more { grid-template-columns: minmax(0, 1fr); } }
+footer { margin: 44px auto 0; padding-bottom: 64px; max-width: 64ch; text-align: center; color: var(--soft); font-size: 15.5px; }
+footer p { margin: 0 0 10px; text-wrap: pretty; }
+footer a { color: var(--ink); text-decoration-color: var(--blue); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <img src="assets/logo.svg" alt="">
+    <strong>Festoon</strong>
+    <a href="https://github.com/dabane-ghassan/festoon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>Source</a>
+  </nav>
+  <main>
+    <section class="stage" id="stage">
+      <div class="bar"><span class="hint">Activities</span><span id="clock">Mon 09:41</span></div>
+      <div id="line" aria-live="polite"><svg class="rope" preserveAspectRatio="none"><path id="cord" fill="none"/></svg></div>
+      <h1>Everything you copy, on a line.</h1>
+      <p class="lede">Screenshots, recordings, text and links hang just under the GNOME top bar. Click one to copy it again, or drag it into any app.</p>
+      <div class="cmd">
+        <code id="cmd">curl -fsSL https://dabane-ghassan.github.io/festoon/install.sh | sh</code>
+        <button type="button" id="copy">Copy</button>
+      </div>
+      <p class="fine">Paste it in a terminal, then log out and back in once. Version 1.0.0, free and open source, for GNOME 45 or later on any distro.</p>
+      <div class="picker">
+        <button type="button" id="shoot"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>Take a screenshot</button>
+        <button type="button" id="hint">Or copy any text on this page</button>
+      </div>
+    </section>
+    <section class="does" aria-label="What it does">
+      <div><span class="ico">📸</span><h2>Screenshots</h2><p>Every screenshot hangs in a glass frame the moment you take it. So do screen recordings.</p></div>
+      <div><span class="ico">📋</span><h2>Copies</h2><p>Text becomes a note, web addresses a link, pictures a picture. Never what a password manager copies.</p></div>
+      <div><span class="ico">🫳</span><h2>Drag</h2><p>Drag an item into a chat, an email or a folder. Click to copy it, hold to mark it up.</p></div>
+      <div><span class="ico">🔎</span><h2>Search</h2><p>Finds notes, links and the words inside your screenshots, read on your computer.</p></div>
+    </section>
+    <section class="more">
+      <div class="keys">
+        <h2>Keys</h2>
+        <dl>
+          <dt>Rest on the top bar</dt><dd>The line comes down. Move away and it goes back up.</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>J</kbd></dt><dd>Down or up. The clothespin in the top bar does the same.</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F</kbd></dt><dd>Search. <kbd>Return</kbd> copies the newest match.</dd>
+          <dt>Click · Hold</dt><dd>Copy · Markup, or edit a note.</dd>
+          <dt>Double-click · <kbd>Space</kbd></dt><dd>Open · Quick Look.</dd>
+          <dt>× · <kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd>Let it go · put it back.</dd>
+          <dt><kbd>festoon update</kbd></dt><dd>Get the latest version.</dd>
+        </dl>
+      </div>
+      <div class="setup">
+        <h2>Good to know</h2>
+        <ul>
+          <li><strong>Nothing leaves your computer.</strong> No account, no network, no analytics. Items live in <code>~/.local/share/festoon</code>.</li>
+          <li><strong>Out of your way.</strong> While the line is up, every click goes to the window underneath.</li>
+          <li><strong>Scriptable.</strong> <code>festoon hang shot.png</code>, <code>festoon copy 2</code>, <code>echo hi | festoon hang -</code>, and D-Bus.</li>
+          <li><strong>Optional:</strong> install <code>tesseract</code> and search reads the text in screenshots.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <p>A GNOME take on <a href="https://tendedero.app/">Tendedero</a> for the Mac. From the maker of <a href="https://dabane-ghassan.github.io/manicule/">Manicule</a>.</p>
+    <p><a href="https://github.com/dabane-ghassan/festoon">Source on GitHub</a> · MIT license</p>
+  </footer>
+</div>
+<script>
+(() => {
+  const stage = document.getElementById('stage');
+  const line = document.getElementById('line');
+  const cord = document.getElementById('cord');
+  const S = 104, GAP = 22, MARGIN = 40, TOP = 18;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const items = [];
+  let shots = 0;
+
+  const clock = () => {
+    const d = new Date();
+    document.getElementById('clock').textContent = d.toLocaleDateString('en', {weekday: 'short'}) + ' ' + d.toTimeString().slice(0, 5);
+  };
+  clock(); setInterval(clock, 30000);
+
+  const W = () => stage.clientWidth;
+  const sag = () => Math.min(22, Math.max(8, W() * 0.011));
+  const ropeY = x => { const u = Math.min(1, Math.max(0, x / W())); return TOP + sag() * 4 * u * (1 - u); };
+
+  function drawRope() {
+    const w = W(); let d = `M-10 ${ropeY(0)}`;
+    for (let i = 1; i <= 40; i++) { const x = w * i / 40; d += ` L${x} ${ropeY(x)}`; }
+    cord.setAttribute('d', d);
+    cord.setAttribute('stroke', '#EDE6D6'); cord.setAttribute('stroke-width', '2.6');
+    cord.style.filter = 'drop-shadow(0 3px 2px rgba(0,0,0,.25))';
+  }
+
+  const hue = s => [...s].reduce((h, c) => (h * 31 + c.codePointAt(0)) % 360, 0);
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+  function shotImage() {
+    const palette = [['#E5482D', '#F5C542', '#3FA34D'], ['#2F6FDE', '#E5482D', '#F5C542'], ['#3FA34D', '#2F6FDE', '#E5482D']][shots % 3];
+    const bars = [0, 1, 2, 3].map(i => { const h = 30 + ((shots * 37 + i * 53) % 70); return `<rect x="${40 + i * 70}" y="${180 - h}" width="48" height="${h}" fill="${palette[i % 3]}"/>`; }).join('');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="#F4EDE0"/><rect x="14" y="12" width="292" height="22" rx="6" fill="#1B1A17"/><circle cx="28" cy="23" r="4" fill="#E5482D"/><circle cx="41" cy="23" r="4" fill="#F5C542"/><circle cx="54" cy="23" r="4" fill="#3FA34D"/><rect x="40" y="48" width="${120 + shots % 4 * 25}" height="12" rx="6" fill="#1B1A17"/>${bars}</svg>`;
+    shots++;
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+
+  function hang(item) {
+    const same = items.find(i => i.key === item.key);
+    if (same) { items.splice(items.indexOf(same), 1); items.unshift(same); same.v += 2; layout(); return; }
+    const el = document.createElement('div');
+    el.className = `card ${item.kind}`;
+    let body = '', w = S, h = S;
+    if (item.kind === 'picture') { w = S * 1.6; h = S; body = `<img alt="" src="${item.src}">`; }
+    else if (item.kind === 'note') { w = S * 0.95; h = S * 1.05; body = `<b>${esc(item.title)}</b><i>${esc(item.rest || ' ')}</i>`; }
+    else { w = S * 1.7; h = S * 0.6; body = `<span class="dot" style="background:hsl(${hue(item.site)} 62% 52%)">${esc(item.site[0].toUpperCase())}</span><span style="min-width:0"><b>${esc(item.site)}</b><i>${esc(item.path || '/')}</i></span>`; }
+    el.innerHTML = `<div class="body" style="width:${w}px;height:${h}px">${body}</div><span class="pin"></span><span class="x" role="button" aria-label="Let go">×</span><span class="tag">${item.tag}</span><span class="copied">Copied</span>`;
+    el.style.width = `${w}px`;
+    Object.assign(item, {el, w, h, x: null, a: 0, v: (Math.random() < .5 ? -1 : 1) * 1.6, drop: -h - 80, dv: 0, z: 1, zv: 0, hover: false});
+    el.addEventListener('mouseenter', () => { item.hover = true; item.v += .4; });
+    el.addEventListener('mouseleave', () => { item.hover = false; });
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('x')) { letGo(item); return; }
+      copy(item);
+    });
+    line.appendChild(el);
+    items.unshift(item);
+    while (items.length > 14) letGo(items[items.length - 1]);
+    layout();
+  }
+
+  async function copy(item) {
+    try {
+      if (item.kind === 'picture') {
+        const img = item.el.querySelector('img');
+        const c = document.createElement('canvas'); c.width = 640; c.height = 400;
+        c.getContext('2d').drawImage(img, 0, 0, 640, 400);
+        const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+      } else {
+        await navigator.clipboard.writeText(item.text);
+      }
+    } catch (_e) { /* the browser said no; the badge still shows */ }
+    item.ignoreNext = true;
+    item.el.classList.add('flash'); item.zv += 3; item.v += .8;
+    setTimeout(() => item.el.classList.remove('flash'), 700);
+  }
+
+  function letGo(item) {
+    const i = items.indexOf(item);
+    if (i < 0) return;
+    items.splice(i, 1);
+    item.falling = {vy: -120, y: 0, spin: (Math.random() - .5) * 3};
+    dying.push(item);
+    layout();
+  }
+
+  function layout() {
+    let x = MARGIN;
+    for (const it of items) { it.tx = x + it.w / 2; if (it.x === null) it.x = it.tx; x += it.w + GAP; }
+  }
+
+  const dying = [];
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(1 / 30, (now - last) / 1000); last = now;
+    const all = [...items, ...dying];
+    for (const it of all) {
+      if (it.falling) {
+        it.falling.vy += 2600 * dt; it.falling.y += it.falling.vy * dt; it.a += it.falling.spin * dt;
+      } else {
+        const before = it.x;
+        it.x += (it.tx - it.x) * Math.min(1, dt * 9);
+        it.v -= Math.max(-.05, Math.min(.05, (it.x - before) * .004));
+        it.v += (-42 * it.a - 1.6 * it.v) * dt; it.a += it.v * dt;
+        it.a = Math.max(-.45, Math.min(.45, it.a));
+        it.dv += (-130 * it.drop - 13 * it.dv) * dt; it.drop += it.dv * dt;
+        const zt = it.hover ? 1.25 : 1;
+        it.zv += (-320 * (it.z - zt) - 26 * it.zv) * dt; it.z += it.zv * dt;
+      }
+      if (reduced) { it.a = 0; it.drop = 0; }
+      const y = ropeY(it.x) + (it.falling ? it.falling.y : it.drop);
+      it.el.style.transform = `translate(${it.x - it.w / 2}px, ${y}px) rotate(${it.a}rad) scale(${it.z})`;
+      it.el.style.zIndex = it.hover ? 5 : 1;
+      if (it.falling) it.el.style.opacity = Math.max(0, 1 - it.falling.y / 300);
+    }
+    for (const it of dying.filter(d => d.falling.y > 400)) { it.el.remove(); dying.splice(dying.indexOf(it), 1); }
+    requestAnimationFrame(frame);
+  }
+
+  function hangText(text) {
+    text = text.trim();
+    if (!text || text.length > 5000) return;
+    if (/^(https?:\/\/|www\.)\S+$/i.test(text)) {
+      try {
+        const u = new URL(/^www\./i.test(text) ? `https://${text}` : text);
+        hang({key: 'l:' + u.href, kind: 'link', text: u.href, site: u.hostname.replace(/^www\./, ''), path: decodeURIComponent(u.pathname === '/' ? '' : u.pathname), tag: 'Link · just now'});
+        return;
+      } catch (_e) { /* not a link after all */ }
+    }
+    const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+    hang({key: 'n:' + text, kind: 'note', text, title: lines[0].slice(0, 80), rest: lines.slice(1).join(' '), tag: 'Note · just now'});
+  }
+
+  document.addEventListener('copy', () => {
+    const text = String(getSelection());
+    setTimeout(() => hangText(text), 30);
+  });
+  document.getElementById('copy').addEventListener('click', async e => {
+    const text = document.getElementById('cmd').textContent;
+    try { await navigator.clipboard.writeText(text); } catch (_e) { /* no permission */ }
+    hangText(text);
+    e.target.textContent = 'Copied';
+    setTimeout(() => (e.target.textContent = 'Copy'), 1400);
+  });
+  document.getElementById('shoot').addEventListener('click', () => {
+    stage.animate([{filter: 'brightness(1.6)'}, {filter: 'brightness(1)'}], {duration: 220});
+    hang({key: 's:' + shots + Math.random(), kind: 'picture', src: shotImage(), tag: 'Screenshot · just now'});
+  });
+  document.getElementById('hint').addEventListener('click', () => {
+    const lede = document.querySelector('.lede');
+    const r = document.createRange(); r.selectNodeContents(lede);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  });
+
+  addEventListener('resize', () => { drawRope(); layout(); });
+  drawRope();
+  hang({key: 'l:gh', kind: 'link', text: 'https://github.com/dabane-ghassan/festoon', site: 'github.com', path: '/dabane-ghassan/festoon', tag: 'Link · 3 min ago'});
+  hang({key: 'n:train', kind: 'note', text: 'Train to Aix\n08:12 from Marseille Saint-Charles, platform B', title: 'Train to Aix', rest: '08:12 from Marseille Saint-Charles, platform B', tag: 'Note · 12 min ago'});
+  hang({key: 's:first', kind: 'picture', src: shotImage(), tag: 'Screenshot · 20 min ago'});
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
